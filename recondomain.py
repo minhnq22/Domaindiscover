@@ -12,7 +12,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 acunetix_host = ""
 acunetix_port = ""
-acunetix_api = ""
+acunetix_apikey = ""
 postgres_host = ""
 postgres_port = ""
 postgres_user = ""
@@ -32,7 +32,13 @@ def runNucleiCommand(output_path):
 
 def checkAcunetixConnection():
     with open("acunetix.conf", "r") as file:
-        config_data = json.load(file)
+        acunetix_config = json.load(file)
+        global acunetix_host
+        global acunetix_port
+        global acunetix_apikey
+        acunetix_host = acunetix_config["acunetix_host"]
+        acunetix_port = acunetix_config["acunetix_port"]
+        acunetix_apikey = acunetix_config["acunetix_apikey"]
     return True
 
 def process_httpx_file(filename):
@@ -56,7 +62,7 @@ def process_httpx_file(filename):
 def createTargetsGroup(domain):
     url = "https://" + acunetix_host + ":" + acunetix_port + "/api/v1/target_groups"
     headers = {
-        "X-Auth": acunetix_api
+        "X-Auth": acunetix_apikey
     }
     data = {
         "name": domain
@@ -84,7 +90,7 @@ def createTargets(targets_list, targets_group):
 
     url = "https://" + acunetix_host + ":" + acunetix_port + "/api/v1/targets/add"
     headers = {
-        "X-Auth": acunetix_api
+        "X-Auth": acunetix_apikey
     }
     data = {
         "targets": targets,
@@ -105,7 +111,7 @@ def configurationTargets(targets):
     for target in targets["targets"]:
         url = "https://" + acunetix_host + ":" + acunetix_port + "/api/v1/targets/" + target["target_id"] + "/configuration"
         headers = {
-            "X-Auth": acunetix_api
+            "X-Auth": acunetix_apikey
         }
         data = {
             "scan_speed": "sequential",
@@ -128,7 +134,7 @@ def configurationTargets(targets):
 def createScan(targets):
     url = "https://" + acunetix_host + ":" + acunetix_port + "/api/v1/scans"
     headers = {
-        "X-Auth": acunetix_api
+        "X-Auth": acunetix_apikey
     }
     for target in targets["targets"]:
         data = {
@@ -182,6 +188,15 @@ def main(args):
     runNucleiCommand(output_path)
 
     if acunetix:
+        print("""
+
+                                     _    _       
+     /\                             | |  (_)      
+    /  \    ___  _   _  _ __    ___ | |_  _ __  __
+   / /\ \  / __|| | | || '_ \  / _ \| __|| |\ \/ /
+  / ____ \| (__ | |_| || | | ||  __/| |_ | | >  < 
+ /_/    \_\\___| \__,_||_| |_| \___| \__||_|/_/\_\
+        """)
         if checkAcunetixConnection():
             targets = process_httpx_file(f"{output_path}/httpx.txt")
             targets_group = createTargetsGroup(domain)
@@ -190,8 +205,6 @@ def main(args):
             createScan(targets)
         else:
             print("Connect to Acunetix server has error. Check configuration file.")
-
-    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Recon Domain")
