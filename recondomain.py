@@ -19,11 +19,11 @@ postgres_user = ""
 postgres_pass = ""
 
 def runSubfinderCommand(domain, output_path):
-    command = f'subfinder -d {output_path} -o {output_path}/subfinder.txt'
+    command = f'subfinder -d {domain} -o {output_path}/subfinder.txt'
     subprocess.run(command, shell=True)
 
 def runHttpxCommand(output_path):
-    command = f'cat {output_path}/subfinder.txt | httpx --no-color -title -status-code | tee /tmp/httpx.txt'
+    command = f'cat {output_path}/subfinder.txt | httpx --no-color -title -status-code | tee /tmp/{output_path}/httpx.txt'
     subprocess.run(command, shell=True)
 
 def runNucleiCommand(output_path):
@@ -153,11 +153,11 @@ def createScan(targets):
             print("Start scan Targets false.", target["address"])
 
 
-def main():
+def main(args):
     domain = args.domain
     output_path = args.output or "/tmp"
-    acunetix_config = args.acunetix_config or "acunetix.conf"
-    gowitness_config = args.gowitness_config or "gowitness.conf"
+    acunetix = args.acunetix
+    postgres = args.postgres
 
     output_path = f"{output_path}/{domain}"
     # Check if the output path exists
@@ -176,7 +176,12 @@ def main():
     os.makedirs(output_path)
     print(f"Created new directory: {output_path}")
 
-    if acunetix_config:
+    # Run
+    runSubfinderCommand(domain, output_path)
+    runHttpxCommand(output_path)
+    runNucleiCommand(output_path)
+
+    if acunetix:
         if checkAcunetixConnection():
             targets = process_httpx_file(f'{output_path}/httpx.txt')
             targets_group = createTargetsGroup(domain)
@@ -186,11 +191,13 @@ def main():
         else:
             print("Connect to Acunetix server has error. Check configuration file.")
 
+    
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Recon Domain")
     parser.add_argument("-d", "--domain", required=True, help="Specify the domain")
     parser.add_argument("-o", "--output", help="Specify the path of the result folder")
-    parser.add_argument("--acunetix", help="Scan with Acunetix config file (optional)")
-    parser.add_argument("--postgres", help="Save Gowitness result to PostgreSQL config file (optional)")
+    parser.add_argument("--acunetix", action="store_true", help="Scan with Acunetix config file (optional)")
+    parser.add_argument("--postgres", action="store_true", help="Save Gowitness result to PostgreSQL config file (optional)")
     args = parser.parse_args()
     main(args)
