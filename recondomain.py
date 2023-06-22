@@ -19,15 +19,15 @@ postgres_user = ""
 postgres_pass = ""
 
 def runSubfinderCommand(domain, output_path):
-    command = f'subfinder -d {domain} -o {output_path}/subfinder.txt'
+    command = f"subfinder -d {domain} -o {output_path}/subfinder.txt"
     subprocess.run(command, shell=True)
 
 def runHttpxCommand(output_path):
-    command = f'cat {output_path}/subfinder.txt | httpx --no-color -title -status-code | tee {output_path}/httpx.txt'
+    command = f"cat {output_path}/subfinder.txt | httpx --no-color -title -status-code | tee {output_path}/httpx.txt"
     subprocess.run(command, shell=True)
 
 def runNucleiCommand(output_path):
-    command = f'cat {output_path}/httpx.txt | awk "{{print $1}}" | nuclei -t ~/.local/nuclei-templates -o {output_path}/nuclei.txt'
+    command = f"cat {output_path}/httpx.txt | awk '{{print $1}}' | nuclei -t ~/.local/nuclei-templates -o {output_path}/nuclei.txt"
     subprocess.run(command, shell=True)
 
 def checkAcunetixConnection():
@@ -183,7 +183,7 @@ def main(args):
 
     if acunetix:
         if checkAcunetixConnection():
-            targets = process_httpx_file(f'{output_path}/httpx.txt')
+            targets = process_httpx_file(f"{output_path}/httpx.txt")
             targets_group = createTargetsGroup(domain)
             targets = createTargets(targets, targets_group)
             configurationTargets(targets)
