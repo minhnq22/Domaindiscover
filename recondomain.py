@@ -23,11 +23,11 @@ def runSubfinderCommand(domain, output_path):
     subprocess.run(command, shell=True)
 
 def runHttpxCommand(output_path):
-    command = f'cat {output_path}/subfinder.txt | httpx --no-color -title -status-code | tee /tmp/{output_path}/httpx.txt'
+    command = f'cat {output_path}/subfinder.txt | httpx --no-color -title -status-code | tee {output_path}/httpx.txt'
     subprocess.run(command, shell=True)
 
 def runNucleiCommand(output_path):
-    command = f'nuclei -t ~/.local/nuclei-templates -o {output_path}/nuclei.txt'
+    command = f'cat {output_path}/httpx.txt | awk "{{print $1}}" | nuclei -t ~/.local/nuclei-templates -o {output_path}/nuclei.txt'
     subprocess.run(command, shell=True)
 
 def checkAcunetixConnection():
