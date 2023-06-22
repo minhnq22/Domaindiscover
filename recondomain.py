@@ -178,7 +178,7 @@ def main():
 
     if acunetix_config:
         if checkAcunetixConnection():
-            targets = process_httpx_file('httpx.txt')
+            targets = process_httpx_file(f'{output_path}/httpx.txt')
             targets_group = createTargetsGroup(domain)
             targets = createTargets(targets, targets_group)
             configurationTargets(targets)
