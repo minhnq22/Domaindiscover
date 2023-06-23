@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
 import urllib3
 import os
 import shutil
@@ -30,22 +29,8 @@ def runNucleiCommand():
     subprocess.run(command, shell=True)
 
 def runAcunetix():
-    print("""
-                                     _    _       
-     /\                             | |  (_)      
-    /  \    ___  _   _  _ __    ___ | |_  _ __  __
-   / /\ \  / __|| | | || '_ \  / _ \| __|| |\ \/ /
-  / ____ \| (__ | |_| || | | ||  __/| |_ | | >  < 
- /_/    \_\\___| \__,_||_| |_| \___| \__||_|/_/\_\\
-    """)
-    if acunetix_control.checkAcunetixConnection():
-        targets = process_httpx_file(f"{output_path}/httpx.txt")
-        targets_group = acunetix_control.createTargetsGroup(domain, output_path)
-        targets = acunetix_control.createTargets(targets, targets_group, output_path)
-        acunetix_control.configurationTargets(targets)
-        acunetix_control.createScan(targets)
-    else:
-        print("Connect to Acunetix server has error. Check configuration file.")
+    targets = process_httpx_file(f"{output_path}/httpx.txt")
+    acunetix_control.createScan(domain, targets, output_path)
 
 def process_httpx_file(filename):
     result = []
