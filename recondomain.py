@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
-import urllib3
 import os
 import shutil
 import subprocess
 import acunetix_control
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 domain = ""
 output_path = ""
@@ -30,7 +27,7 @@ def runNucleiCommand():
 
 def runAcunetix():
     targets = process_httpx_file(f"{output_path}/httpx.txt")
-    acunetix_control.createScan(domain, targets, output_path)
+    acunetix_control.createScans(domain, targets, output_path)
 
 def process_httpx_file(filename):
     result = []
@@ -78,7 +75,7 @@ def main(args):
     # Run
     runSubfinderCommand()
     runHttpxCommand()
-    runNucleiCommand()
+    # runNucleiCommand()
 
     if acunetix:
         runAcunetix()

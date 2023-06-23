@@ -2,7 +2,9 @@
 import requests
 import json
 import argparse
+import urllib3
 
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 acunetix_host = ""
 acunetix_port = ""
 acunetix_apikey = ""
@@ -53,8 +55,8 @@ def createTargetsGroup(domain, output_path):
     if response.status_code == 201:
         print("Create Targets Group successful!")
         response_data = response.json()
-        with open(f"{output_path}/acunetix_targets_group.txt", "w") as file:
-            file.write(str(response_data))
+        with open(f"{output_path}/acunetix_targets_group.json", "w") as file:
+            json.dump(response_data, file)
         return response_data
     else:
         print("API request failed with status code:", response.status_code)
@@ -80,8 +82,8 @@ def createTargets(targets_list, targets_group, output_path):
     if response.status_code == 200:
         print("Create Targets successful!")
         response_data = response.json()
-        with open(f"{output_path}/acunetix_targets.txt", "w") as file:
-            file.write(str(response_data))
+        with open(f"{output_path}/acunetix_targets.json", "w") as file:
+            json.dump(response_data, file)
         return response_data
     else:
         print("API request failed with status code:", response.status_code)
@@ -109,7 +111,7 @@ def configurationTargets(targets):
             }
             response = requests.post(url, headers=headers, json=data, verify=False)
 
-def createScans(targets):
+def activeScans(targets):
     url = "https://" + acunetix_host + ":" + acunetix_port + "/api/v1/scans"
     headers = {
         "X-Auth": acunetix_apikey
@@ -135,7 +137,84 @@ def createScans(targets):
         else:
             print("Start scan Targets false.", target["address"])
 
-def createScan(domain, targets, output_path):
+def checkStatus(targets_path):
+    if not checkAcunetixConnection():
+        return
+    with open(f"{targets_path}/acunetix_targets.json", "r") as file:
+        targets = json.load(file)["targets"]
+    headers = {
+        "X-Auth": acunetix_apikey
+    }
+    for target in targets:
+        url = "https://" + acunetix_host + ":" + acunetix_port + "/api/v1/targets/" + target["target_id"]
+        response = requests.get(url, headers=headers, verify=False)
+        if response.status_code == 200:
+            print(target["address"], response.json()["last_scan_session_status"], response.json()["severity_counts"])
+        else:
+            print("Get Targets scan status false.", target["target_id"])
+
+def stopScans(targets_path):
+    if not checkAcunetixConnection():
+        return
+    with open(f"{targets_path}/acunetix_targets.json", "r") as file:
+        targets = json.load(file)["targets"]
+    headers = {
+        "X-Auth": acunetix_apikey
+    }
+    for target in targets:
+        url = "https://" + acunetix_host + ":" + acunetix_port + "/api/v1/targets/" + target["target_id"]
+        response = requests.get(url, headers=headers, verify=False)
+        if response.status_code == 200:
+            url = "https://" + acunetix_host + ":" + acunetix_port + "/api/v1/scans/" + str(response.json()["last_scan_id"]) + "/abort"
+            response = requests.post(url, headers=headers, verify=False)
+            print("Stop scan target", target["address"])
+        else:
+            print("Stop scan target fail", target["address"])
+
+# def stopScans(targets_path):
+#     if not checkAcunetixConnection():
+#         return
+#     with open(f"{targets_path}/acunetix_targets.json", "r") as file:
+#         targets = json.load(file)["targets"]
+#     headers = {
+#         "X-Auth": acunetix_apikey
+#     }
+#     data = {
+#         "enabled": True
+#     }
+#     for target in targets:
+#         url = "https://" + acunetix_host + ":" + acunetix_port + "/api/v1/targets/" + target["target_id"] + "/continuous_scan"
+#         response = requests.post(url, headers=headers, json=data, verify=False)
+#         if response.status_code == 200:
+#             print("Stop scan target", target["address"])
+#         else:
+#             print("Stop scan target fail", target["address"])
+
+def deleteScans(targets_path):
+    if not checkAcunetixConnection():
+        return
+    with open(f"{targets_path}/acunetix_targets.json", "r") as file:
+        targets = json.load(file)["targets"]
+    headers = {
+        "X-Auth": acunetix_apikey
+    }
+    for target in targets:
+        url = "https://" + acunetix_host + ":" + acunetix_port + "/api/v1/targets/" + target["target_id"]
+        response = requests.delete(url, headers=headers, verify=False)
+        if response.status_code == 200:
+            print("Delete target", target["address"])
+        else:
+            print("Delete target FAIL", target["address"])
+    with open(f"{targets_path}/acunetix_targets_group.json", "r") as file:
+        group = json.load(file)
+    url = "https://" + acunetix_host + ":" + acunetix_port + "/api/v1/target_groups/" + group["group_id"]
+    response = requests.delete(url, headers=headers, verify=False)
+    if response.status_code == 200:
+        print("Delete group", group["name"])
+    else:
+        print("Delete group FAIL", group["name"])
+
+def createScans(domain, targets, output_path):
     print("""
                                      _    _       
      /\                             | |  (_)      
@@ -148,7 +227,7 @@ def createScan(domain, targets, output_path):
         targets_group = createTargetsGroup(domain, output_path)
         targets = createTargets(targets, targets_group, output_path)
         configurationTargets(targets)
-        createScans(targets)
+        activeScans(targets)
     else:
         print("Connect to Acunetix server has error. Check configuration file.")
 
@@ -163,13 +242,25 @@ def main(args):
  
  Using -h or --help.
     """)
+    targets_path = args.targets_path
+    status = args.status
+    stop_scans = args.stop_scans
+    delete_scans = args.delete_scans
+
+    if status:
+        checkStatus(targets_path)
+
+    if stop_scans:
+        stopScans(targets_path)
+
+    if delete_scans:
+        deleteScans(targets_path)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Acunetix Control")
+    parser.add_argument("--targets-path", help="Path to targets (domain), acunetix_targets_group.json and acunetix_targets.json")
     parser.add_argument("--status", action="store_true", help="Check scans status")
-    parser.add_argument("--stop-scan", help="Specify the path of the result folder")
-    parser.add_argument("--delete-scan", help="Specify the path of the result folder")
-    parser.add_argument("--stop-all", action="store_true", help="Scan with Acunetix config file (optional)")
-    parser.add_argument("--delete-all", action="store_true", help="Save Gowitness result to PostgreSQL config file (optional)")
+    parser.add_argument("--stop-scans", action="store_true", help="Stop scan(s)")
+    parser.add_argument("--delete-scans", action="store_true", help="Delete scan(s)")
     args = parser.parse_args()
     main(args)
